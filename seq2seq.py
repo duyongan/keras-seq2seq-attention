@@ -1,29 +1,23 @@
-import pickle
-from keras.preprocessing.text import Tokenizer
-from keras.preprocessing.sequence import pad_sequences
-from keras.utils import to_categorical
-import numpy as np
-from keras.layers import Embedding, TimeDistributed, RepeatVector,concatenate , GRU, Input, Reshape, Dense, Flatten
-from keras.models import Model,load_model
-from keras.layers.core import Reshape
+from keras.layers import Embedding, GRU, Input, Reshape, Dense
+from keras.models import Model
+from keras.layers.core import Reshape,Lambda,Flatten
 from keras.layers.wrappers import Bidirectional
 
-
-lenth_of_seq=len(xs[0])
-vocab_size=len(tokenizer.word_index)+1
-out_length=len(ys[0])
+lenth_of_seq=10
+vocab_size=5000
+out_length=10
+embedding_size=300
+GRU_cell=100
+Dense_cell=out_length*100
 
 x = Input(shape=(lenth_of_seq,))
-x_embedding = Embedding(vocab_size, 100, input_length=lenth_of_seq)(x)
-hidden_layer = Bidirectional(GRU(100,return_sequences=True))(x_embedding)
-mid_list=[]
-for i in range(out_length):
-    mid = Dense(5)(hidden_layer)
-    mid = Reshape((1,lenth_of_seq*5))(mid)
-    mid_list.append(mid)
-mid_2=concatenate(mid_list,axis=1)
-y = Bidirectional(GRU(100,return_sequences=True))(mid_2)
-y=Dense(vocab_size,activation='softmax')(y)
+x_embedding = Embedding(vocab_size, embedding_size, input_length=lenth_of_seq)(x)
+hidden_layer = Bidirectional(GRU(GRU_cell,return_sequences=True))(x_embedding)
+mid=Flatten()(hidden_layer)
+mid = Dense(Dense_cell,use_bias=False)(mid)
+mid=Reshape((out_length,-1))(mid)
+mid = Bidirectional(GRU(GRU_cell,return_sequences=True))(mid)
+y=Dense(vocab_size,activation='softmax')(mid)
 model = Model(inputs=x, outputs=y)
 model.compile(loss='categorical_crossentropy', optimizer='Adam',metrics=['acc'])
 model.summary()
